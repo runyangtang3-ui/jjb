@@ -1,0 +1,224 @@
+-- ============================================
+-- ★ 红星 hx 中心 —— 刷物品（白/黄/彩色幸运方块）
+-- ============================================
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- 加载 Obsidian
+local ObsidianRepo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
+loadstring(game:HttpGet(ObsidianRepo .. "Library.lua"))()
+local Library = getgenv().Library or getgenv().ObsidianLibrary
+if not Library then warn("[Grief] Library = nil"); return end
+
+-- 创建窗口（标题和 Footer 都留空，我们后面自己贴）
+local Window = Library:CreateWindow({
+    Title = "",
+    Footer = "",
+    Center = true,
+    AutoShow = true,
+    NotifySide = "Right",
+})
+
+-- ============================================
+-- 在 Obsidian 窗口标题栏和 Footer 位置贴红白文字
+-- ============================================
+local function getWindowHolder()
+    return Window.Holder or Window.MainFrame
+end
+
+local function buildColoredTitle(parent, position, size)
+    local frame = Instance.new("Frame")
+    frame.Name = "GriefColoredTitle"
+    frame.BackgroundTransparency = 1
+    frame.BorderSizePixel = 0
+    frame.Position = position
+    frame.Size = size
+    frame.Parent = parent
+
+    local layout = Instance.new("UIListLayout")
+    layout.FillDirection = Enum.FillDirection.Horizontal
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    layout.VerticalAlignment = Enum.VerticalAlignment.Center
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 0)
+    layout.Parent = frame
+
+    local function mk(text, color, order, fontSize)
+        local lbl = Instance.new("TextLabel")
+        lbl.BackgroundTransparency = 1
+        lbl.BorderSizePixel = 0
+        lbl.Text = text
+        lbl.TextColor3 = color
+        lbl.Font = Enum.Font.GothamBold
+        lbl.TextSize = fontSize or 20
+        lbl.TextXAlignment = Enum.TextXAlignment.Center
+        lbl.TextYAlignment = Enum.TextYAlignment.Center
+        lbl.Size = UDim2.new(0, 0, 1, 0)
+        lbl.AutomaticSize = Enum.AutomaticSize.X
+        lbl.LayoutOrder = order
+        lbl.Parent = frame
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(0, 0, 0)
+        stroke.Thickness = 1
+        stroke.Transparency = 0.5
+        stroke.Parent = lbl
+        return lbl
+    end
+
+    mk("★ ", Color3.fromRGB(255, 200, 0), 0, 20)   -- 五角星（金黄色）
+    mk("红星 ", Color3.fromRGB(255, 0, 0), 1, 20)
+    mk("h", Color3.fromRGB(255, 0, 0), 2, 20)
+    mk("x 中心", Color3.fromRGB(255, 255, 255), 3, 20)
+
+    return frame
+end
+
+task.spawn(function()
+    task.wait(1.5)
+
+    local holder = getWindowHolder()
+    if not holder then
+        warn("[Grief] 找不到 Window.Holder")
+        return
+    end
+
+    local titleLabel
+    local footerLabel
+    for _, d in ipairs(holder:GetDescendants()) do
+        if d:IsA("TextLabel") then
+            if d.Name == "Title" then titleLabel = d end
+            if d.Name == "Footer" then footerLabel = d end
+        end
+    end
+
+    if not titleLabel then
+        local topY = math.huge
+        for _, d in ipairs(holder:GetDescendants()) do
+            if d:IsA("TextLabel") and d.AbsoluteSize.Y >= 16 and d.AbsoluteSize.Y <= 40 then
+                if d.AbsolutePosition.Y < topY and d.AbsolutePosition.Y >= 0 then
+                    topY = d.AbsolutePosition.Y
+                    titleLabel = d
+                end
+            end
+        end
+    end
+
+    if titleLabel then
+        titleLabel.Text = ""
+        titleLabel.TextTransparency = 1
+        buildColoredTitle(titleLabel.Parent, titleLabel.Position, titleLabel.Size)
+    end
+
+    if footerLabel then
+        footerLabel.Text = ""
+        footerLabel.TextTransparency = 1
+        buildColoredTitle(footerLabel.Parent, footerLabel.Position, footerLabel.Size)
+    end
+
+    print("[Grief] 标题已上色")
+end)
+
+-- ============================================
+-- 刷物品功能
+-- ============================================
+local Tabs = {
+    Main = Window:AddTab("Main", "box"),
+    Settings = Window:AddTab("UI Settings", "settings"),
+}
+
+local autoWhite = false
+local whiteDelay = 0.5
+local whiteThread = nil
+local autoYellow = false
+local yellowDelay = 0.5
+local yellowThread = nil
+local autoRainbow = false
+local rainbowDelay = 0.5
+local rainbowThread = nil
+
+local function fireRemote(remoteName)
+    local ok, err = pcall(function()
+        ReplicatedStorage:WaitForChild(remoteName, 5):FireServer()
+    end)
+    if not ok then warn("[Grief] 刷取失败 (" .. remoteName .. "): " .. tostring(err)) end
+    return ok
+end
+
+local function spawnWhite() return fireRemote("SpawnGalaxyBlock") end
+local function spawnYellow() return fireRemote("SpawnLuckyBlock") end
+local function spawnRainbow() return fireRemote("SpawnRainbowBlock") end
+
+local function startWhite()
+    if whiteThread then return end
+    whiteThread = task.spawn(function()
+        while autoWhite do pcall(spawnWhite); task.wait(whiteDelay) end
+        whiteThread = nil
+    end)
+end
+local function stopWhite() autoWhite = false; if whiteThread then task.cancel(whiteThread); whiteThread = nil end end
+
+local function startYellow()
+    if yellowThread then return end
+    yellowThread = task.spawn(function()
+        while autoYellow do pcall(spawnYellow); task.wait(yellowDelay) end
+        yellowThread = nil
+    end)
+end
+local function stopYellow() autoYellow = false; if yellowThread then task.cancel(yellowThread); yellowThread = nil end end
+
+local function startRainbow()
+    if rainbowThread then return end
+    rainbowThread = task.spawn(function()
+        while autoRainbow do pcall(spawnRainbow); task.wait(rainbowDelay) end
+        rainbowThread = nil
+    end)
+end
+local function stopRainbow() autoRainbow = false; if rainbowThread then task.cancel(rainbowThread); rainbowThread = nil end end
+
+local whiteBox = Tabs.Main:AddLeftGroupbox("白色幸运方块")
+whiteBox:AddButton({ Text = "刷取白色幸运方块（一次）", Func = function()
+    if spawnWhite() then Library:Notify({ Title = "白色幸运方块", Description = "已刷取 1 个", Time = 2 })
+    else Library:Notify({ Title = "白色幸运方块", Description = "刷取失败", Time = 3 }) end
+end })
+whiteBox:AddToggle("AutoWhite", { Text = "自动重复刷取（白色）", Default = false, Callback = function(val)
+    autoWhite = val
+    if val then startWhite(); Library:Notify({ Title = "白色幸运方块", Description = "自动刷取已开启", Time = 2 })
+    else stopWhite(); Library:Notify({ Title = "白色幸运方块", Description = "自动刷取已关闭", Time = 2 }) end
+end })
+whiteBox:AddSlider("WhiteDelay", { Text = "刷取间隔（秒）", Default = 0.5, Min = 0.05, Max = 5, Rounding = 2, Compact = true, Callback = function(v) whiteDelay = v end })
+
+local yellowBox = Tabs.Main:AddLeftGroupbox("黄色幸运方块")
+yellowBox:AddButton({ Text = "刷取黄色幸运方块（一次）", Func = function()
+    if spawnYellow() then Library:Notify({ Title = "黄色幸运方块", Description = "已刷取 1 个", Time = 2 })
+    else Library:Notify({ Title = "黄色幸运方块", Description = "刷取失败", Time = 3 }) end
+end })
+yellowBox:AddToggle("AutoYellow", { Text = "自动重复刷取（黄色）", Default = false, Callback = function(val)
+    autoYellow = val
+    if val then startYellow(); Library:Notify({ Title = "黄色幸运方块", Description = "自动刷取已开启", Time = 2 })
+    else stopYellow(); Library:Notify({ Title = "黄色幸运方块", Description = "自动刷取已关闭", Time = 2 }) end
+end })
+yellowBox:AddSlider("YellowDelay", { Text = "刷取间隔（秒）", Default = 0.5, Min = 0.05, Max = 5, Rounding = 2, Compact = true, Callback = function(v) yellowDelay = v end })
+
+local rainbowBox = Tabs.Main:AddLeftGroupbox("彩色幸运方块")
+rainbowBox:AddButton({ Text = "刷取彩色幸运方块（一次）", Func = function()
+    if spawnRainbow() then Library:Notify({ Title = "彩色幸运方块", Description = "已刷取 1 个", Time = 2 })
+    else Library:Notify({ Title = "彩色幸运方块", Description = "刷取失败", Time = 3 }) end
+end })
+rainbowBox:AddToggle("AutoRainbow", { Text = "自动重复刷取（彩色）", Default = false, Callback = function(val)
+    autoRainbow = val
+    if val then startRainbow(); Library:Notify({ Title = "彩色幸运方块", Description = "自动刷取已开启", Time = 2 })
+    else stopRainbow(); Library:Notify({ Title = "彩色幸运方块", Description = "自动刷取已关闭", Time = 2 }) end
+end })
+rainbowBox:AddSlider("RainbowDelay", { Text = "刷取间隔（秒）", Default = 0.5, Min = 0.05, Max = 5, Rounding = 2, Compact = true, Callback = function(v) rainbowDelay = v end })
+
+Tabs.Settings:AddLeftGroupbox("菜单"):AddLabel("菜单按键"):AddKeyPicker("MenuKeybind", {
+    Default = "RightShift",
+    NoUI = true,
+    Text = "菜单按键",
+})
+Library.ToggleKeybind = Options.MenuKeybind
+
+print("[Grief] 加载完成 ✓")
