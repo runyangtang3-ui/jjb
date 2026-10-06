@@ -8,19 +8,19 @@ WasUIPro:SetDefaultRainbowMode("流动")
 WasUIPro:SetLanguage("中文")
 
 local mainWindow = WasUIPro:CreateWindow({
-    Title = "TrashHub-重型钓鱼",
+    Title = "红星h x中心-重型钓鱼",
     MinimizedText = "TrashHub",
     SnowEnabled = true,
     DialogTitle = "确认关闭窗口",
-    Folder = "TrashHub_重型钓鱼",
+    Folder = "红星h x中心_重型钓鱼",
     TitleTag = {
-        { text = "伊散", backgroundColor = Color3.fromRGB(255,215,0), textColor = Color3.fromRGB(0,0,0) }
+        { text = "不处", backgroundColor = Color3.fromRGB(255,215,0), textColor = Color3.fromRGB(0,0,0) }
     }
 })
 
 task.spawn(function()
     task.wait(0.5)
-    WasUIPro:Notify({ Title = "加载完成", Content = "TrashHub-重型钓鱼", Duration = 3 })
+    WasUIPro:Notify({ Title = "加载完成", Content = "红星h x中心-重型钓鱼", Duration = 3 })
 end)
 
 local fishingTab = mainWindow:Tab({ Title = "钓鱼" })
@@ -59,7 +59,7 @@ _G.BossLockMode = false
 
 fishingTab:Paragraph({
     Title = "注意事项",
-    Desc = "开启过滤之后只钓boss，如果不是boss则自动放弃(暂时用不了在维护)",
+    Desc = "开启过滤之后只钓boss，如果不是boss则自动放弃",
     Icon = "alert-circle"
 })
 
@@ -829,4 +829,4 @@ Uis.InputBegan:Connect(function(input, processed)
     end
 end)
 
-WasUIPro:Notify({ Title = "TrashHub", Content = "加载完成", Duration = 4 })
+WasUIPro:Notify({ Title = "红星h x中心", Content = "加载完成", Duration = 4 })
