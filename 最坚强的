@@ -1,721 +1,781 @@
--- FlowAuth 许可证兼容变量
-LRM_IsUserPremium=true
--- 用户是否为高级会员：是
-LRM_LinkedDiscordID="0"
--- 绑定的 Discord 账号 ID：0
-LRM_ScriptName="Strongest Battlegrounds"
--- 脚本名称：最强战场
-LRM_TotalExecutions=0
--- 总共运行次数：0
-LRM_SecondsLeft=86332
--- 剩余授权秒数：86332 秒
-LRM_UserNote="Checkpoint Key (Visitor IP: IP)"
--- 用户备注：校验密钥（访客 IP：IP）
-LRM_ScriptVersion="0.0.0.4"
--- 脚本版本：0.0.0.4
-LRM_ExecutionTrace="fa1_yudfD_5oTtPJpy0FVu4Nvin2"
--- 执行追踪标识：fa1_yudfD_5oTtPJpy0FVu4Nvin2
+--[[
+    ★ 红星 hx 中心（Obsidian UI 汉化版）
+    原脚本: Snowy Hub v6.0（https://doitenroi.win/paste/3wo8jh/raw）
+    UI   : Obsidian Library（https://github.com/deividcomsono/Obsidian）
+    说明 : 功能全量汉化，UI 框架替换为 Obsidian。
+           Roblox 第三方脚本存在封号风险，请自行评估使用。
+]]
 
-do
-    local environment = getgenv()
-    -- 获取全局环境变量
-    environment._premTag = function(name)
-    return tostring(name)
+-- ================= 兼容层 =================
+pcall(function()
+    if not setclipboard then
+        if toclipboard then setclipboard = toclipboard
+        elseif Clipboard and Clipboard.set then setclipboard = function(s) Clipboard:set(s) end
+        end
     end
-    -- 高级标签函数，直接把输入转为字符串返回
-    environment._isPremiumUser = function()
-    return true
+
+    if not getgenv().Drawing or type(getgenv().Drawing) ~= "table" or not getgenv().Drawing.new then
+        local DrawingObj = {
+            new = function(_kind)
+                local fake = setmetatable(
+                    { Visible = false, Remove = function() end, Destroy = function() end },
+                    { __newindex = function() end, __index = function() return function() end end }
+                )
+                return fake
+            end,
+            Fonts = { UI = 0, System = 1, Plex = 2, Monospace = 3 },
+        }
+        pcall(function() getgenv().Drawing = DrawingObj end)
     end
-    -- 判断是否高级用户，固定返回 true
+
+    if not request then
+        if syn and syn.request then request = syn.request
+        elseif http and http.request then request = http.request
+        elseif http_request then request = http_request end
+    end
+    pcall(function() if request then getgenv().request = request end end)
+
+    if not gethui then getgenv().gethui = function() return game:GetService("CoreGui") end end
+    if not identifyexecutor then getgenv().identifyexecutor = function() return "Unknown", "0.0.0" end end
+    if not queue_on_teleport then getgenv().queue_on_teleport = function() end end
+
+    if not mouse1press then
+        local VIM = game:GetService("VirtualInputManager")
+        getgenv().mouse1press = function()
+            pcall(function() VIM:SendMouseButtonEvent(0, 0, 0, true, game, 1) end)
+        end
+        getgenv().mouse1release = function()
+            pcall(function() VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1) end)
+        end
+    end
+end)
+
+-- ================= 加载 Obsidian 库 =================
+local ObsidianRepo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
+local okLoad, errLoad = pcall(function()
+    loadstring(game:HttpGet(ObsidianRepo .. "Library.lua"))()
+end)
+if not okLoad then
+    warn("[红星中心] Obsidian 库加载失败: " .. tostring(errLoad))
+    return
+end
+local Library = getgenv().Library or getgenv().ObsidianLibrary
+if not Library then
+    warn("[红星中心] 未找到 Obsidian Library")
+    return
 end
 
-do
-    local environment = getgenv()
-    local runtime = environment.__SnowyUIRuntime or {}
-    -- 读取 Snowy 界面运行环境，不存在就新建空表
-
-    function runtime.corner(radius, parent)
-    -- 给控件添加圆角
-        if typeof(parent) ~= "Instance" then return nil end
-        -- 如果父对象不是游戏实例，直接返回空
-        local object = Instance.new("UICorner")
-        -- 创建圆角组件
-        object.CornerRadius = UDim.new(0, tonumber(radius) or 8)
-        -- 圆角半径，默认 8 像素
-        object.Parent = parent
-        -- 挂载到目标 UI 控件上
-        return object
-    end
-
-    function runtime.stroke(color, thickness, parent)
-    -- 给控件添加描边边框
-        if typeof(parent) ~= "Instance" then return nil end
-        local object = Instance.new("UIStroke")
-        -- 创建 UI 描边组件
-        object.Color = color or Color3.fromRGB(85, 213, 254)
-        -- 描边颜色，默认浅蓝色
-        object.Thickness = tonumber(thickness) or 1
-        -- 描边粗细，默认 1
-        object.Parent = parent
-        return object
-    end
-
-    function runtime.gradient(parent, firstColor, secondColor, rotation)
-    -- 给控件添加渐变色
-        if typeof(parent) ~= "Instance" then return nil end
-        local object = Instance.new("UIGradient")
-        -- 创建渐变组件
-        object.Color = ColorSequence.new(
-        firstColor or Color3.fromRGB(18, 24, 64),
-        secondColor or firstColor or Color3.fromRGB(24, 32, 85)
-        )
-        -- 起始、结束渐变颜色
-        object.Rotation = tonumber(rotation) or 0
-        -- 渐变旋转角度，默认 0
-        object.Parent = parent
-        return object
-    end
-
-    function runtime.shadow(parent)
-    -- 给控件添加阴影效果
-        if typeof(parent) ~= "Instance" then return nil end
-        local object = Instance.new("ImageLabel")
-        -- 用图片实现阴影
-        object.Name = "SnowyShadow"
-        object.BackgroundTransparency = 1
-        -- 背景完全透明
-        object.Position = UDim2.new(0, -18, 0, -18)
-        object.Size = UDim2.new(1, 36, 1, 36)
-        -- 阴影向外扩大一圈
-        object.Image = "rbxassetid://6015897843"
-        -- 阴影图片资源
-        object.ImageColor3 = Color3.new(0, 0, 0)
-        -- 黑色阴影
-        object.ImageTransparency = 0.42
-        -- 阴影透明度 0.42
-        object.ScaleType = Enum.ScaleType.Slice
-        object.SliceCenter = Rect.new(49, 49, 450, 450)
-        -- 九宫格拉伸
-        object.ZIndex = 0
-        object.Parent = parent
-        return object
-    end
-
-    function runtime.tw(instance, properties, duration, easingStyle, easingDirection)
-    -- 界面补间动画，平滑移动、缩放 UI
-        if typeof(instance) ~= "Instance" or type(properties) ~= "table" then return nil end
-        local tween = game:GetService("TweenService"):Create(
-        instance,
-        TweenInfo.new(
-        tonumber(duration) or 0.2,
-        -- 动画时长默认 0.2 秒
-        easingStyle or Enum.EasingStyle.Quad,
-        -- 缓动曲线
-        easingDirection or Enum.EasingDirection.Out
-        -- 缓动方向
-        ),
-        properties
-        )
-        tween:Play()
-        -- 播放动画
-        return tween
-    end
-
-    environment.__SnowyUIRuntime = runtime
-    environment.corner = runtime.corner
-    environment.stroke = runtime.stroke
-    environment.gradient = runtime.gradient
-    environment.shadow = runtime.shadow
-    environment.tw = runtime.tw
-    -- 把这些 UI 工具函数注册到全局环境
-end
-
-if not getgenv()._nagPremium then
-    local function _nagPremium()
-
-    end
-    getgenv()._nagPremium = _nagPremium
-end
--- 注册高级会员弹窗提醒函数，暂时是空函数
-
-local TweenService     = game:GetService("TweenService")
--- 补间动画服务
-local UserInputService = game:GetService("UserInputService")
--- 键盘、鼠标输入服务
-local RunService       = game:GetService("RunService")
--- 游戏循环运行服务
-local Players          = game:GetService("Players")
--- 玩家服务
-local HttpService      = game:GetService("HttpService")
--- 网络请求服务
-local CoreGui          = game:GetService("CoreGui")
--- 顶层系统 GUI 容器
-local LocalPlayer      = Players.LocalPlayer
--- 本机玩家
-
-do
-
-    local function safeGetGlobal(name)
-    -- 安全读取全局变量，防止报错
-        local ok, v = pcall(function() return _G[name] end)
-        if ok and v then return v end
-        local ok2, v2 = pcall(function() return getgenv()[name] end)
-        if ok2 and v2 then return v2 end
-        return rawget(_ENV or _G, name)
-    end
-    local function safeSetGlobal(name, value)
-    -- 安全写入全局变量
-        pcall(function() getgenv()[name] = value end)
-    end
-
+-- ================= 通知 =================
+local function notify(title, text, duration)
     pcall(function()
-    getgenv().__realGetRawMT     = getgenv().__realGetRawMT     or safeGetGlobal("getrawmetatable")
-    getgenv().__realHookNamecall = getgenv().__realHookNamecall or safeGetGlobal("hookmetamethod")
-    getgenv().__realNewCClosure  = getgenv().__realNewCClosure  or safeGetGlobal("newcclosure")
-    -- 保存执行器原生的元表、钩子、C 闭包函数
-end)
-
-local function stubGetRaw(_obj)
-    -- 伪造 getrawmetatable 空返回，反检测
-    return setmetatable({}, {__index = function() return function() end end, __newindex = function() end})
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = title,
+            Text = text,
+            Duration = duration or 4,
+        })
+    end)
 end
 
-local function stubHookNC(_obj, _method, _fn)
-    -- 伪造 hookmetamethod 空钩子，反检测
-    return function() return nil end
-end
+-- ================= 创建窗口 =================
+local Window = Library:CreateWindow({
+    Title = "★ 红星 hx 中心",
+    Footer = "Snowy Hub 汉化版 · Obsidian UI",
+    Center = true,
+    AutoShow = true,
+    NotifySide = "Right",
+})
 
-safeSetGlobal("getrawmetatable", stubGetRaw)
-safeSetGlobal("hookmetamethod",  stubHookNC)
-safeSetGlobal("setreadonly",     function() end)
-safeSetGlobal("setrawmetatable", function(t, _mt) return t end)
--- 替换原生函数，欺骗游戏反作弊
+local Tabs = {}
+local Options = Options or {}
 
-warn("[SnowyHub] Anti-detect stub installed (Delta-compatible).")
--- 控制台输出：SnowyHub 反检测模块已加载，兼容 Delta 执行器
-end
+-- ================= 游戏检测 =================
+local currentPlaceId = tonumber(game.PlaceId) or 0
+local isTSB = (currentPlaceId == 10495922230) -- The Strongest Battlegrounds
 
-pcall(function()
+-- ================= 设置标签（菜单按键，始终存在） =================
+Tabs.Settings = Window:AddTab("设置", "settings")
+local menuBox = Tabs.Settings:AddLeftGroupbox("菜单")
+menuBox:AddLabel("菜单按键")
+menuBox:AddKeyPicker("MenuKeybind", {
+    Default = "RightShift",
+    NoUI = true,
+    Text = "菜单按键",
+})
+Library.ToggleKeybind = Options.MenuKeybind
 
-if not setclipboard then
-    if toclipboard then setclipboard = toclipboard
-    elseif Clipboard and Clipboard.set then setclipboard = function(s) Clipboard:set(s) end
-else setclipboard = function() end end
-end
--- 兼容不同执行器的剪贴板复制函数
+-- ============================================================
+-- TSB 专属功能（The Strongest Battlegrounds）
+-- ============================================================
+if isTSB then
+    Tabs.Farm = Window:AddTab("自动刷怪", "box")
+    Tabs.Stats = Window:AddTab("统计", "box")
+    Tabs.Credits = Window:AddTab("致谢", "box")
 
-if not mouse1press then
-    local VIM = game:GetService("VirtualInputManager")
-    getgenv().mouse1press = function()
-    pcall(function() VIM:SendMouseButtonEvent(0, 0, 0, true, game, 1) end)
-end
-getgenv().mouse1release = function()
-pcall(function() VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1) end)
-end
+    local farmBox = Tabs.Farm:AddLeftGroupbox("自动刷怪")
+    local statsBox = Tabs.Stats:AddLeftGroupbox("统计")
+    local creditBox = Tabs.Credits:AddLeftGroupbox("致谢")
 
-end
--- 模拟鼠标左键按下、松开
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local UIS = game:GetService("UserInputService")
+    local lp = Players.LocalPlayer
+    local isMobile = UIS.TouchEnabled
 
-if not getgenv().Drawing or type(getgenv().Drawing) ~= "table" or not getgenv().Drawing.new then
-    local DrawingObj = {
-    new = function(_kind)
-    local fake = setmetatable({Visible = false, Remove = function(self) end,
-    Destroy = function(self) end},
-    {__newindex = function() end, __index = function() return function() end end})
-    return fake
-end,
-    Fonts = {UI = 0, System = 1, Plex = 2, Monospace = 3},
-    }
-pcall(function() getgenv().Drawing = DrawingObj end)
-end
--- 伪造 Drawing 绘制库，用来绕过游戏检测
+    local lowestHpFarmEnabled = false
+    local autoUltimateEnabled = false
+    local autoEmoteEnabled = false
+    local currentTarget = nil
+    local farmConnection = nil
+    local attackThread = nil
 
-if not request then
-    if syn and syn.request then request = syn.request
-    elseif http and http.request then request = http.request
-elseif http_request then request = http_request end
-end
-pcall(function() if request then getgenv().request = request end end)
--- 兼容不同执行器的网络请求
+    local farmOffsetX, farmOffsetY, farmOffsetZ = 0, 0, 3
 
-if not queue_on_teleport then
-    getgenv().queue_on_teleport = function() end
-end
--- 传送地图时执行脚本，空兼容
+    local startTime = tick()
+    local startKills = 0
+    local leaderstats = lp:FindFirstChild("leaderstats")
+    if leaderstats and leaderstats:FindFirstChild("Kills") then
+        startKills = leaderstats.Kills.Value
+    end
 
-if not gethui then
-    getgenv().gethui = function() return game:GetService("CoreGui") end
-end
--- 获取隐藏 GUI 容器兼容
+    local kpmLabel = statsBox:AddLabel("每分钟击杀: 0.00")
+    task.spawn(function()
+        while task.wait(1) do
+            local currentKills = (leaderstats and leaderstats:FindFirstChild("Kills") and leaderstats.Kills.Value) or 0
+            local elapsed = (tick() - startTime) / 60
+            local text = string.format("每分钟击杀: %.2f", (currentKills - startKills) / math.max(0.01, elapsed))
+            pcall(function() kpmLabel:Set(text) end)
+        end
+    end)
 
-if not identifyexecutor then
-    getgenv().identifyexecutor = function() return "Unknown", "0.0.0" end
-end
--- 伪造执行器识别，返回未知
-end)
-
-local Theme = {
-WindowWidth   = 720,
--- 窗口宽度 720
-WindowHeight  = 520,
--- 窗口高度 520
-HeaderHeight  = 48,
--- 标题栏高 48
-TabBarHeight  = 44,
--- 标签栏高 44
-BannerHeight  = 62,
--- 横幅高度 62
-Radius        = 24,
--- 大圆角 24
-RadiusSm      = 16,
--- 中等圆角 16
-RadiusXs      = 12,
--- 小圆角 12
-RadiusPill    = 999,
--- 完全胶囊圆角
-
-BgPrimary     = Color3.fromRGB(18, 24, 64),
--- 主背景色
-BgSecondary   = Color3.fromRGB(24, 32, 85),
--- 次级背景
-BgCard        = Color3.fromRGB(35, 45, 110),
--- 卡片背景
-BgCardHover   = Color3.fromRGB(45, 60, 140),
--- 卡片悬浮颜色
-BgCardActive  = Color3.fromRGB(40, 65, 160),
--- 卡片选中激活
-BgHeader      = Color3.fromRGB(14, 18, 50),
--- 标题栏背景
-BgInput       = Color3.fromRGB(20, 28, 70),
--- 输入框背景
-BgTabBar      = Color3.fromRGB(20, 28, 70),
--- 标签栏背景
-
-Accent        = Color3.fromRGB(85, 213, 254),
--- 主题高亮色
-AccentBright  = Color3.fromRGB(135, 235, 255),
--- 高亮亮色
-AccentDark    = Color3.fromRGB(50, 170, 220),
--- 高亮深色
-AccentDim     = Color3.fromRGB(30, 90, 130),
--- 高亮暗色
-AccentGlow    = Color3.fromRGB(180, 240, 255),
--- 高亮发光色
-AccentSoft    = Color3.fromRGB(100, 200, 255),
--- 柔和高亮
-
-Premium       = Color3.fromRGB(255, 200, 50),
--- 高级会员金色
-PremiumDark   = Color3.fromRGB(180, 130, 20),
-PremiumDim    = Color3.fromRGB(50, 40, 10),
-
-BannerBg      = Color3.fromRGB(15, 45, 100),
-BannerActive  = Color3.fromRGB(25, 70, 150),
-
-TextPrimary   = Color3.fromRGB(230, 245, 255),
--- 主要文字颜色
-TextSecondary = Color3.fromRGB(160, 190, 230),
--- 次要文字
-TextMuted     = Color3.fromRGB(80, 110, 160),
--- 弱化文字
-TextDim       = Color3.fromRGB(50, 70, 110),
-
-Border        = Color3.fromRGB(30, 45, 100),
--- 普通边框
-BorderHi      = Color3.fromRGB(60, 100, 220),
--- 高亮边框
-
-Success       = Color3.fromRGB(50, 220, 120),
--- 成功绿色
-Error         = Color3.fromRGB(255, 55, 75),
--- 错误红色
-Warning       = Color3.fromRGB(255, 180, 50),
--- 警告黄色
-}
-
-local SUPPORTED_GAMES = {
-{ name = "BedWars", icon = utf8.char(0x1F6CF), aliases = {"bedwars", "bed wars"}, placeIds = {6872265039, 6872274481}, features = 69, img = "rbxassetid://6034281798" },
--- 床战
-{ name = "BedWars", icon = utf8.char(0x1F6CF), aliases = {"bedwars", "bed wars"}, placeIds = {6872265039, 6872274481}, features = 69, img = "rbxassetid://6034281798" },
-{ name = "Taxi Boss", icon = utf8.char(0x1F695), aliases = {"taxi boss", "taxiboss", "taxi"}, placeIds = {7305309231}, features = 40, img = "rbxassetid://6034281798" },
--- 出租车老板
-{ name = "BloxStrike", icon = utf8.char(0x1F3AF), aliases = {"bloxstrike", "blox strike"}, placeIds = {114234929420007}, features = 45, img = "rbxassetid://6034281798" },
--- Blox 枪战
-{ name = "Anime Expeditions", icon = utf8.char(0x26A1), aliases = {"anime expeditions", "expeditions", "anime expedition"}, placeIds = {84515722934860}, features = 40, img = "rbxassetid://6034281798" },
--- 动漫远征
-{ name = "Arsenal",      icon = utf8.char(0x1F3AF),  placeIds = {286090429, 2133507413},   features = 20, img = "rbxassetid://6034281798" },
--- 兵工厂
-{ name = "Jujutsu Shenanigans", icon = utf8.char(0x26A1), aliases = {"jujutsu shenanigans", "jujutsu", "shenanigans"}, placeIds = {9391468976}, universeIds = {3508322461}, features = 15, img = "rbxassetid://6034281798" },
--- 咒术乱斗
-{ name = "Abyss",        icon = utf8.char(0x1F30A),  placeIds = {8841631016, 6499213745},  features = 22, img = "rbxassetid://6034281798" },
--- 深渊
-{ name = "Jailbreak",    icon = utf8.char(0x1F6A8),  placeIds = {606849621},               features = 50,  img = "rbxassetid://6034281798" },
--- 越狱
-{ name = "Sniper Duels", icon = utf8.char(0x1F3AF),  placeIds = {2957674229, 3519873232, 109397169461300},  features = 12, img = "rbxassetid://6034281798" },
--- 狙击手对决
-{ name = "Swing Obby",   icon = utf8.char(0x1F3A2),  placeIds = {5334680521},              features = 10, img = "rbxassetid://6034281798" },
--- 荡秋千障碍跑
-{ name = "Brookhaven",   icon = utf8.char(0x1F3E0),  placeIds = {4924922222},              features = 15, img = "rbxassetid://6034281798" },
--- 布鲁克海文
-{ name = "99 Nights",    icon = utf8.char(0x1F319),  placeIds = {13271790403, 14502339080}, features = 28, img = "rbxassetid://6034281798" },
--- 99 夜
-{ name = "Blox Fruits",  icon = utf8.char(0x1F34E),  aliases = {"blox fruits", "blox fruit", "bloxfruits"}, placeIds = {2753915549, 4442272183, 7449423635}, features = 18, img = "rbxassetid://6034281798" },
--- 方块果实
-{ name = "Pet Sim 99",   icon = utf8.char(0x1F43E),  aliases = {"pet simulator 99", "pet sim 99", "petsim99"}, placeIds = {8737899170, 15532244896, 15588347101}, universeIds = {3317771874}, features = 15, img = "rbxassetid://6034281798" },
--- 宠物模拟器 99
-{ name = "Bee Swarm",    icon = utf8.char(0x1F41D),  placeIds = {1537690962},              features = 12, img = "rbxassetid://6034281798" },
--- 蜜蜂蜂群模拟器
-{ name = "SAB",          icon = utf8.char(0x1F916),  aliases = {"steal a brainrot", "sab"}, placeIds = {18668065096, 1234567890, 10495922230, 109983668079237}, universeIds = {109983668079237}, features = 24, img = "rbxassetid://6034281798" },
--- SAB 偷脑游戏
-{ name = "Ultimate Battlegrounds", icon = utf8.char(0x1F52A), placeIds = {11815767793}, features = 18, img = "rbxassetid://6034281798" },
--- 终极战场
-{ name = "Strongest Battlegrounds", icon = utf8.char(0x1F525), placeIds = {10495922230}, features = 15, img = "rbxassetid://6034281798" },
--- 最强战场
-{ name = "Heroes Battlegrounds", icon = utf8.char(0x1F9B8), placeIds = {13076380114}, features = 16, img = "rbxassetid://6034281798" },
--- 英雄战场
-{ name = "Legend Battlegrounds", icon = utf8.char(0x1F5E1), placeIds = {15269951959}, features = 18, img = "rbxassetid://6034281798" },
--- 传奇战场
-{ name = "Jump for Brainrots", icon = utf8.char(0x1F9E0), placeIds = {139299356663913}, features = 12, img = "rbxassetid://6034281798" },
--- 跳跃拿脑
-{ name = "+1 Jump Brainrot", icon = utf8.char(0x1F45F), placeIds = {121192350097093}, features = 15, img = "rbxassetid://6034281798" },
--- 加一跳
-{ name = "Grab Ores!", icon = utf8.char(0x26CF), placeIds = {82806856224736}, features = 45, img = "rbxassetid://6034281798" },
--- 挖矿
-{ name = "Murderers VS Sheriffs", icon = utf8.char(0x1F52A), placeIds = {135856908115931}, features = 22, img = "rbxassetid://6034281798" },
--- 凶手对抗警长
-{ name = "Sailor Piece", icon = utf8.char(0x2693), aliases = {"sailor piece", "sailor peace"}, placeIds = {77747658251236}, features = 38, img = "rbxassetid://6034281798" },
--- 航海篇章
-{ name = "MM2",          icon = utf8.char(0x1F5E1),  aliases = {"murder mystery 2", "mm2"}, placeIds = {142823291, 80005698042109}, features = 40, img = "rbxassetid://6034281798" },
--- 杀手之谜 2
-{ name = "Kick a Lucky Block", icon = utf8.char(0x1F340), aliases = {"kick a lucky block", "lucky block", "kick lucky"}, placeIds = {16955097151, 89469502395769}, universeIds = {89469502395769}, features = 30, img = "rbxassetid://6034281798" },
--- 踢幸运方块
-{ name = "Rivals",       icon = utf8.char(0x1F52B), aliases = {"rivals", "rivals fps", "matchmaking"}, placeIds = {17625359962, 14721849686, 117398147513099}, universeIds = {6035872082}, features = 22, img = "rbxassetid://6034281798" },
--- 对手 FPS
-{ name = "Speed Keyboard Escape", icon = utf8.char(0x2328), aliases = {"speed keyboard escape", "keyboard escape", "1 speed keyboard escape", "escape candy chocolate", "1-speed-keyboard-escape", "keyboard"}, placeIds = {95082159892680}, features = 16, img = "rbxassetid://6034281798" },
--- 键盘竞速逃生
-{ name = "Speed Monkey Escape", icon = utf8.char(0x1F412), aliases = {"speed monkey escape", "monkey escape", "1 speed monkey escape", "monkey"}, placeIds = {114697347887839}, features = 20, img = "rbxassetid://6034281798" },
--- 猴子竞速逃生
-{ name = "Sell Lemons", icon = utf8.char(0x1F34B), aliases = {"sell lemons", "lemon tycoon", "lemons"}, placeIds = {79268393072444}, features = 14, img = "rbxassetid://6034281798" },
--- 卖柠檬大亨
-{ name = "Demonology", icon = utf8.char(0x1F47B), aliases = {"demonology", "ghost hunter", "demon"}, placeIds = {18199615050}, features = 12, img = "rbxassetid://6034281798" },
--- 恶魔学 捉鬼
-{ name = "Grow a Garden 2", icon = utf8.char(0x1F331), aliases = {"grow a garden 2", "grow a garden", "gag2", "gag 2"}, placeIds = {97598239454123, 1588579651, 126884695634066}, universeIds = {7436755782}, features = 25, img = "rbxassetid://6034281798" },
--- 种植花园 2
-{ name = "Welcome to Bloxburg", icon = utf8.char(0x1F3E0), aliases = {"welcome to bloxburg", "bloxburg"}, placeIds = {185655149}, features = 16, img = "rbxassetid://6034281798" },
--- 欢迎来到 Bloxburg
-{ name = "Adopt Me", icon = utf8.char(0x1F436), aliases = {"adopt me", "adoptme"}, placeIds = {920587237}, features = 12, img = "rbxassetid://6034281798" },
--- 领养我
-{ name = "Dandy's World", icon = utf8.char(0x1F3A8), aliases = {"dandys world", "dandy", "dandys"}, placeIds = {16267229903}, features = 10, img = "rbxassetid://6034281798" },
--- 丹迪世界
-{ name = "Blade Ball", icon = utf8.char(0x1F52A), aliases = {"blade ball", "bladeball", "bb"}, placeIds = {13772394625, 14777999650, 15182888200}, features = 25, img = "rbxassetid://6034281798" },
--- 刀刃球
-{ name = "KAT",          icon = utf8.char(0x1F52A), placeIds = {621129760}, universeIds = {228028122}, features = 11, img = "rbxassetid://6034281798" },
--- KAT 刀战
-{ name = "One Scope",    icon = utf8.char(0x1F3AF), placeIds = {135648408848758}, features = 7, img = "rbxassetid://6034281798" },
--- 单倍瞄准
-{ name = "Da Hood",      icon = utf8.char(0x1F3E0), aliases = {"da hood", "dahood", "dh"}, placeIds = {2788229376, 105305881594005, 98343466176190, 93778920465645, 129449254792324, 122120252103378, 110917236678062, 130879446158509}, features = 120, img = "rbxassetid://6034281798" },
--- 街区 Da Hood
-{ name = "Evade",        icon = utf8.char(0x1F3C3), aliases = {"evade", "rise"}, placeIds = {9872472334}, features = 45, img = "rbxassetid://6034281798" },
--- 躲避
-{ name = "Bridge Duel",  icon = utf8.char(0x1F5E1), aliases = {"bridge duel", "bridge duels", "uoro"}, placeIds = {139566161526375}, features = 35, img = "rbxassetid://6034281798" },
--- 桥上决斗
-{ name = "Drain the Lake", icon = utf8.char(0x1F4A7), aliases = {"drain the lake", "drain lake"}, placeIds = {138381251771774}, universeIds = {10267363348}, features = 9, img = "rbxassetid://6034281798" },
--- 抽干湖水
-{ name = "Prison Life", icon = utf8.char(0x1F6A8), aliases = {"prison life", "prison"}, placeIds = {155615604}, universeIds = {73885730}, features = 9, img = "rbxassetid://6034281798" },
--- 监狱人生
-{ name = "Fish It", icon = utf8.char(0x1F41F), aliases = {"fish it", "fisch", "fishit"}, placeIds = {121864768012064, 16732694052, 17445763782}, features = 25, img = "rbxassetid://6034281798" },
--- 钓鱼
-{ name = "Volleyball Legends", icon = utf8.char(0x1F3D0), aliases = {"volley ball legends", "volleyball legends", "volleyball", "volley ball"}, placeIds = {85395484560711}, universeIds = {6931042565}, features = 20, img = "rbxassetid://6034281798" },
--- 排球传奇
-{ name = "Flee the Facility", icon = utf8.char(0x1F3C3), aliases = {"flee city", "flee the facility", "flee"}, placeIds = {893973440}, universeIds = {372226183}, features = 30, img = "rbxassetid://6034281798" }
--- 逃离设施
-}
-getgenv().SUPPORTED_GAMES = SUPPORTED_GAMES
--- 全部支持的游戏列表注册到全局
-
-local _detectedGame = nil
-local _currentPlaceId = tonumber(game.PlaceId) or 0
--- 当前地图 ID
-local _currentGameId = tonumber(game.GameId) or 0
--- 当前游戏宇宙 ID
-local _gameName = ""
-
-pcall(function()
-local info = game:GetService("MarketplaceService"):GetProductInfo(_currentPlaceId)
-if info and info.Name then _gameName = info.Name:lower() end
-end)
--- 读取当前游戏名称，转为小写
-
-for _, gd in ipairs(SUPPORTED_GAMES) do
-    if gd.placeIds then
-        for _, pid in ipairs(gd.placeIds) do
-            if _currentPlaceId == tonumber(pid) then
-                _detectedGame = gd
-                break
-            end
+    local function comm(args)
+        local char = lp.Character
+        if char and char:FindFirstChild("Communicate") then
+            pcall(function() char.Communicate:FireServer(unpack(args)) end)
         end
     end
-    if not _detectedGame and gd.universeIds then
-        for _, uid in ipairs(gd.universeIds) do
-            if _currentGameId == tonumber(uid) then
-                _detectedGame = gd
-                break
+
+    local function getChar(plr)
+        local live = workspace:FindFirstChild("Live")
+        return (live and live:FindFirstChild(plr.Name)) or plr.Character
+    end
+
+    local function isAlive(plr)
+        local c = getChar(plr)
+        local h = c and c:FindFirstChildOfClass("Humanoid")
+        return h and h.Health > 0
+    end
+
+    local function getTarget()
+        local low, best = math.huge, nil
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= lp and isAlive(p) then
+                local h = getChar(p).Humanoid.Health
+                if h < low then low = h; best = p end
             end
         end
+        return best
     end
-    if _detectedGame then break end
-end
--- 匹配地图 ID 识别当前游戏
 
-if not _detectedGame and _gameName ~= "" then
-    for _, gd in ipairs(SUPPORTED_GAMES) do
-        local gNameLower = gd.name:lower()
-        if _gameName:find(gNameLower, 1, true) then
-            _detectedGame = gd
-            break
+    local function fireHotbar()
+        pcall(function()
+            local hotbar = lp.PlayerGui:FindFirstChild("Hotbar")
+            local backpack = hotbar and hotbar:FindFirstChild("Backpack")
+            local hb = backpack and backpack:FindFirstChild("Hotbar")
+            if not hb then return end
+
+            local events = { "MouseButton1Click", "MouseButton1Down", "MouseButton1Up", "Activated" }
+
+            for i = 1, 4 do
+                local slot = hb:FindFirstChild(tostring(i))
+                local btn = slot and slot:FindFirstChild("Base")
+                if btn and (btn:IsA("TextButton") or btn:IsA("ImageButton")) then
+                    for _, eventName in ipairs(events) do
+                        if firesignal then
+                            firesignal(btn[eventName])
+                        elseif getconnections then
+                            for _, connection in pairs(getconnections(btn[eventName])) do
+                                if connection.Fire then connection:Fire() end
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    end
+
+    local function stopFarm()
+        if farmConnection then farmConnection:Disconnect(); farmConnection = nil end
+        if attackThread then task.cancel(attackThread); attackThread = nil end
+        currentTarget = nil
+    end
+
+    local function startFarm()
+        stopFarm()
+        farmConnection = RunService.Heartbeat:Connect(function()
+            if not lowestHpFarmEnabled then return end
+            if not currentTarget or not isAlive(currentTarget) then currentTarget = getTarget() end
+            if currentTarget then
+                local tHrp = getChar(currentTarget):FindFirstChild("HumanoidRootPart")
+                local myHrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+                if tHrp and myHrp then
+                    myHrp.CFrame = tHrp.CFrame * CFrame.new(farmOffsetX, farmOffsetY, farmOffsetZ)
+                end
+            end
+        end)
+        attackThread = task.spawn(function()
+            while lowestHpFarmEnabled do
+                if currentTarget and isAlive(currentTarget) then
+                    comm(isMobile and {{ Goal = "LeftClick", Mobile = true }} or {{ Goal = "LeftClick" }})
+                    comm({{ Dash = Enum.KeyCode.W, Key = Enum.KeyCode.Q, Goal = "KeyPress" }})
+                    if autoUltimateEnabled then comm({{ MoveDirection = Vector3.zero, Key = Enum.KeyCode.G, Goal = "KeyPress" }}) end
+                    if autoEmoteEnabled then comm({{ Goal = "Emote Spin" }}) end
+                    fireHotbar()
+                end
+                task.wait(0.1)
+            end
+        end)
+    end
+
+    farmBox:AddToggle("TSBFarm", {
+        Text = "自动刷怪（优先血量最低）",
+        Default = false,
+        Callback = function(v)
+            lowestHpFarmEnabled = v
+            if v then startFarm() else stopFarm() end
+        end,
+    })
+    farmBox:AddToggle("TSBUItimate", {
+        Text = "自动终极技",
+        Default = false,
+        Callback = function(v) autoUltimateEnabled = v end,
+    })
+    farmBox:AddToggle("TSBEmote", {
+        Text = "击杀后自动表情",
+        Default = false,
+        Callback = function(v) autoEmoteEnabled = v end,
+    })
+
+    farmBox:AddLabel("刷怪偏移调整")
+    farmBox:AddSlider("TSBOffsetX", {
+        Text = "偏移 X（左右）",
+        Default = 0,
+        Min = -15,
+        Max = 15,
+        Rounding = 1,
+        Compact = false,
+        Callback = function(v) farmOffsetX = v end,
+    })
+    farmBox:AddSlider("TSBOffsetY", {
+        Text = "偏移 Y（上下）",
+        Default = 0,
+        Min = -15,
+        Max = 15,
+        Rounding = 1,
+        Compact = false,
+        Callback = function(v) farmOffsetY = v end,
+    })
+    farmBox:AddSlider("TSBOffsetZ", {
+        Text = "偏移 Z（前后）",
+        Default = 3,
+        Min = -15,
+        Max = 15,
+        Rounding = 1,
+        Compact = false,
+        Callback = function(v) farmOffsetZ = v end,
+    })
+
+    creditBox:AddLabel("由 红星 hx 中心 汉化集成")
+    creditBox:AddLabel("原脚本作者: nismovxa")
+    creditBox:AddButton({
+        Text = "复制官方 Discord",
+        Func = function()
+            pcall(function() setclipboard("https://discord.gg/getsnowy") end)
+            notify("致谢", "链接已复制到剪贴板！")
+        end,
+    })
+
+    goto done
+end
+
+-- ============================================================
+-- 通用功能（未检测到 TSB 时显示）
+-- ============================================================
+Tabs.Home = Window:AddTab("主页", "box")
+Tabs.Player = Window:AddTab("玩家", "box")
+Tabs.Visuals = Window:AddTab("画面", "box")
+Tabs.Util = Window:AddTab("工具", "box")
+Tabs.Aimbot = Window:AddTab("自瞄", "box")
+
+local homeBox = Tabs.Home:AddLeftGroupbox("状态")
+homeBox:AddLabel(utf8.char(0x2744) .. " 雪花中心 v6.0（汉化版）")
+
+-- ---------- 玩家 ----------
+local playerBox = Tabs.Player:AddLeftGroupbox("通用")
+
+local WalkSpeedValue = 16
+local JumpPowerValue = 50
+local GodModeEnabled = false
+local godLoop = nil
+
+playerBox:AddSlider("WalkSpeed", {
+    Text = "移速",
+    Default = 16,
+    Min = 16,
+    Max = 250,
+    Rounding = 1,
+    Compact = false,
+    Callback = function(value)
+        WalkSpeedValue = value
+        local char = game.Players.LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.WalkSpeed = value
         end
-        if gd.aliases then
-            for _, alias in ipairs(gd.aliases) do
-                local aLower = alias:lower()
-                if #aLower >= 3 and _gameName:find(aLower, 1, true) then
-                    _detectedGame = gd
-                    break
+    end,
+})
+playerBox:AddSlider("JumpPower", {
+    Text = "跳跃高度",
+    Default = 50,
+    Min = 50,
+    Max = 250,
+    Rounding = 1,
+    Compact = false,
+    Callback = function(value)
+        JumpPowerValue = value
+        local char = game.Players.LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.JumpPower = value
+        end
+    end,
+})
+playerBox:AddSlider("Gravity", {
+    Text = "重力",
+    Default = 196,
+    Min = 0,
+    Max = 196,
+    Rounding = 1,
+    Compact = false,
+    Callback = function(value)
+        game.Workspace.Gravity = value
+    end,
+})
+
+playerBox:AddToggle("GodMode", {
+    Text = "无敌模式",
+    Default = false,
+    Callback = function(state)
+        GodModeEnabled = state
+        if state then
+            if godLoop then pcall(function() godLoop:Disconnect() end) end
+            godLoop = game:GetService("RunService").RenderStepped:Connect(function()
+                pcall(function()
+                    local char = game.Players.LocalPlayer.Character
+                    if char and char:FindFirstChild("Humanoid") then
+                        local hum = char.Humanoid
+                        if hum.MaxHealth ~= math.huge then hum.MaxHealth = math.huge end
+                        if hum.Health ~= math.huge then hum.Health = math.huge end
+                        pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false) end)
+                    end
+                end)
+            end)
+        else
+            if godLoop then pcall(function() godLoop:Disconnect() end); godLoop = nil end
+            pcall(function()
+                local char = game.Players.LocalPlayer.Character
+                if char and char:FindFirstChild("Humanoid") then
+                    char.Humanoid.MaxHealth = 100
+                    char.Humanoid.Health = 100
+                    char.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+                end
+            end)
+        end
+    end,
+})
+
+local Noclip = nil
+local Clip = nil
+local function noclip()
+    Clip = false
+    local function Nocl()
+        if Clip == false and game.Players.LocalPlayer.Character ~= nil then
+            for _, v in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+                if v:IsA("BasePart") and v.CanCollide then
+                    v.CanCollide = false
                 end
             end
         end
-        if _detectedGame then break end
+        wait(0.21)
     end
+    Noclip = game:GetService("RunService").Stepped:Connect(Nocl)
 end
--- 地图 ID 没匹配上，就用游戏名字匹配
+local function clip()
+    if Noclip then Noclip:Disconnect() end
+    Clip = true
+end
 
-if not _detectedGame then
-    if _gameName:find("bedwars") or _gameName:find("bed wars") then
-        for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "BedWars" then _detectedGame = gd; break end end
-    elseif _gameName:find("bedwars") or _gameName:find("bed wars") then
-    for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "BedWars" then _detectedGame = gd; break end end
-elseif _gameName:find("blox fruit") or _gameName:find("bloxfruit") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "Blox Fruits" then _detectedGame = gd; break end end
-elseif _gameName:find("fish it") or _gameName:find("fisch") or _gameName:find("fishit") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "Fish It" then _detectedGame = gd; break end end
-elseif _gameName:find("steal a brainrot") or _gameName:find("sab") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "SAB" then _detectedGame = gd; break end end
-elseif _gameName:find("volley") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "Volleyball Legends" then _detectedGame = gd; break end end
-elseif _gameName:find("speed keyboard") or _gameName:find("keyboard escape") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "Speed Keyboard Escape" then _detectedGame = gd; break end end
-elseif _gameName:find("speed monkey") or _gameName:find("monkey escape") or _gameName:find("monkey") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "Speed Monkey Escape" then _detectedGame = gd; break end end
-elseif _gameName:find("anime expedition") or _gameName:find("expedition") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "Anime Expeditions" then _detectedGame = gd; break end end
-elseif _gameName:find("grow a garden") or _gameName:find("gag2") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "Grow a Garden 2" then _detectedGame = gd; break end end
-elseif _gameName:find("prison life") or _gameName:find("prison") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "Prison Life" then _detectedGame = gd; break end end
-elseif _gameName:find("da hood") or _gameName:find("dahood") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "Da Hood" then _detectedGame = gd; break end end
-elseif _gameName:find("bloxstrike") or _gameName:find("blox strike") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "BloxStrike" then _detectedGame = gd; break end end
-elseif _gameName:find("taxi boss") or _gameName:find("taxiboss") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "Taxi Boss" then _detectedGame = gd; break end end
-elseif _gameName:find("evade") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "Evade" then _detectedGame = gd; break end end
-elseif _gameName:find("flee the facility") or _gameName:find("flee city") or _gameName:find("flee") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "Flee the Facility" then _detectedGame = gd; break end end
-end
-end
--- 单独处理一批热门游戏的关键词识别
+playerBox:AddToggle("Noclip", {
+    Text = "穿墙",
+    Default = false,
+    Callback = function(state)
+        if state then noclip() else clip() end
+    end,
+})
 
-if not _detectedGame then
-    pcall(function()
-    local RS = game:GetService("ReplicatedStorage")
-    if RS:FindFirstChild("TS") or lplr.PlayerScripts:FindFirstChild("TS") then
-        for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "BedWars" then _detectedGame = gd; break end end
-    elseif RS:FindFirstChild("TS") or lplr.PlayerScripts:FindFirstChild("TS") then
-    for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "BedWars" then _detectedGame = gd; break end end
-elseif RS:FindFirstChild("Remotes") and RS.Remotes:FindFirstChild("CommF_") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "Blox Fruits" then _detectedGame = gd; break end end
-elseif RS:FindFirstChild("events") and RS.events:FindFirstChild("reels") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "Fish It" then _detectedGame = gd; break end end
-elseif RS:FindFirstChild("Volleyball") or workspace:FindFirstChild("Volleyball") or RS:FindFirstChild("Volley") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "Volleyball Legends" then _detectedGame = gd; break end end
-elseif RS:FindFirstChild("Brainrots") or workspace:FindFirstChild("Brainrots") then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "SAB" then _detectedGame = gd; break end end
-elseif workspace:FindFirstChild("ComputerTrigger", true) or workspace:FindFirstChild("FreezePod", true) then
-for _, gd in ipairs(SUPPORTED_GAMES) do if gd.name == "Flee the Facility" then _detectedGame = gd; break end end
-end
+local isInfJump = false
+game:GetService("UserInputService").JumpRequest:Connect(function()
+    if isInfJump and game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
+        game.Players.LocalPlayer.Character.Humanoid:ChangeState("Jumping")
+    end
 end)
-end
--- 读取游戏内部物件来判断是什么游戏
+playerBox:AddToggle("InfJump", {
+    Text = "无限跳跃",
+    Default = false,
+    Callback = function(state)
+        isInfJump = state
+    end,
+})
 
-_detectedGame = { name = "Strongest Battlegrounds", features = 0 }
--- 强制锁定当前脚本运行游戏为 最强战场
+-- ---------- 画面 ----------
+local visualBox = Tabs.Visuals:AddLeftGroupbox("画面与特效")
 
-local SnowyLib = {}
+visualBox:AddSlider("FOV", {
+    Text = "视野（FOV）",
+    Default = 70,
+    Min = 70,
+    Max = 120,
+    Rounding = 1,
+    Compact = false,
+    Callback = function(value)
+        game.Workspace.CurrentCamera.FieldOfView = value
+    end,
+})
 
-local _notifHolder = nil
-local function _pushNotif(title, text, dur, gold)
--- 弹出右上角通知
-    dur = dur or 4
-    if not _notifHolder then
-        local scr = Instance.new("ScreenGui", CoreGui)
-        scr.Name = "SnowyNotifs"; scr.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-        _notifHolder = scr
+visualBox:AddToggle("Fullbright", {
+    Text = "全亮（去除阴影）",
+    Default = false,
+    Callback = function(state)
+        if state then
+            game.Lighting.Ambient = Color3.new(1, 1, 1)
+            game.Lighting.ColorShift_Bottom = Color3.new(1, 1, 1)
+            game.Lighting.ColorShift_Top = Color3.new(1, 1, 1)
+            game.Lighting.GlobalShadows = false
+        else
+            game.Lighting.Ambient = Color3.fromRGB(128, 128, 128)
+            game.Lighting.GlobalShadows = true
+        end
+    end,
+})
+
+local espHighlights = {}
+visualBox:AddToggle("ESP", {
+    Text = "玩家透视（ESP）",
+    Default = false,
+    Callback = function(state)
+        if state then
+            for _, player in pairs(game.Players:GetPlayers()) do
+                if player ~= game.Players.LocalPlayer and player.Character then
+                    local highlight = Instance.new("Highlight")
+                    highlight.Parent = player.Character
+                    highlight.FillColor = Color3.fromRGB(85, 213, 254)
+                    highlight.OutlineColor = Color3.fromRGB(24, 32, 85)
+                    highlight.FillTransparency = 0.5
+                    table.insert(espHighlights, highlight)
+                end
+            end
+        else
+            for _, highlight in pairs(espHighlights) do
+                if highlight and highlight.Parent then pcall(function() highlight:Destroy() end) end
+            end
+            espHighlights = {}
+        end
+    end,
+})
+
+visualBox:AddSlider("Hitbox", {
+    Text = "命中体积扩展",
+    Default = 2,
+    Min = 2,
+    Max = 20,
+    Rounding = 1,
+    Compact = false,
+    Callback = function(value)
+        _G.HeadSize = value
+        _G.Disabled = true
+        game:GetService("RunService").RenderStepped:Connect(function()
+            if _G.Disabled then
+                for i, v in next, game:GetService("Players"):GetPlayers() do
+                    if v.Name ~= game:GetService("Players").LocalPlayer.Name then
+                        pcall(function()
+                            v.Character.HumanoidRootPart.Size = Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize)
+                            v.Character.HumanoidRootPart.Transparency = 0.7
+                            v.Character.HumanoidRootPart.BrickColor = BrickColor.new("Really blue")
+                            v.Character.HumanoidRootPart.Material = "Neon"
+                            v.Character.HumanoidRootPart.CanCollide = false
+                        end)
+                    end
+                end
+            end
+        end)
+    end,
+})
+
+-- ---------- 工具 ----------
+local utilBox = Tabs.Util:AddLeftGroupbox("通用工具")
+
+utilBox:AddButton({
+    Text = "给予建造工具",
+    Func = function()
+        local tool1 = Instance.new("HopperBin", game.Players.LocalPlayer.Backpack)
+        tool1.BinType = "Clone"
+        local tool2 = Instance.new("HopperBin", game.Players.LocalPlayer.Backpack)
+        tool2.BinType = "Hammer"
+        local tool3 = Instance.new("HopperBin", game.Players.LocalPlayer.Backpack)
+        tool3.BinType = "Grab"
+        notify("工具", "已发放 复制/锤子/抓取 建造工具")
+    end,
+})
+
+utilBox:AddButton({
+    Text = "传送到随机玩家",
+    Func = function()
+        local players = game.Players:GetPlayers()
+        if #players > 1 then
+            local randomPlayer = players[math.random(1, #players)]
+            repeat randomPlayer = players[math.random(1, #players)]
+            until randomPlayer.Name ~= game.Players.LocalPlayer.Name
+            if randomPlayer.Character and randomPlayer.Character:FindFirstChild("HumanoidRootPart")
+                and game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = randomPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+            end
+        else
+            notify("传送", "当前服务器没有其他玩家")
+        end
+    end,
+})
+
+utilBox:AddButton({
+    Text = "重进服务器",
+    Func = function()
+        game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, game.Players.LocalPlayer)
+    end,
+})
+
+utilBox:AddButton({
+    Text = "更换服务器",
+    Func = function()
+        local Http = game:GetService("HttpService")
+        local TPS = game:GetService("TeleportService")
+        local Api = "https://games.roblox.com/v1/games/"
+        local _place = game.PlaceId
+        local _servers = Api .. tostring(_place) .. "/servers/Public?sortOrder=Asc&limit=100"
+        local function ListServers(cursor)
+            local Raw = game:HttpGet(_servers .. ((cursor and "&cursor=" .. cursor) or ""))
+            return Http:JSONDecode(Raw)
+        end
+        local Server, Next
+        repeat
+            local Servers = ListServers(Next)
+            Server = Servers.data[1]
+            Next = Servers.nextPageCursor
+        until Server
+        TPS:TeleportToPlaceInstance(_place, Server.id, game.Players.LocalPlayer)
+    end,
+})
+
+utilBox:AddToggle("AntiAFK", {
+    Text = "防挂机",
+    Default = false,
+    Callback = function(state)
+        local gc = getconnections or get_signal_cons
+        if state and gc then
+            for i, v in pairs(gc(game.Players.LocalPlayer.Idled)) do
+                if v["Disable"] then v["Disable"](v)
+                elseif v["Disconnect"] then v["Disconnect"](v) end
+            end
+        end
+    end,
+})
+
+-- ---------- 自瞄 ----------
+local AimbotParams = {
+    Enabled = false,
+    ShowFOV = false,
+    FOVRadius = 80,
+    Smoothness = 0.5,
+    TeamCheck = true,
+    TargetPart = "Head",
+}
+
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Position = Vector2.new(game.Workspace.CurrentCamera.ViewportSize.X / 2, game.Workspace.CurrentCamera.ViewportSize.Y / 2)
+FOVCircle.Radius = AimbotParams.FOVRadius
+FOVCircle.Filled = false
+FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+FOVCircle.Visible = false
+FOVCircle.Thickness = 1
+
+local function getClosestPlayerToCursor()
+    local closestDist = AimbotParams.FOVRadius
+    local closestPlayer = nil
+    local mousePos = game:GetService("UserInputService"):GetMouseLocation()
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= game.Players.LocalPlayer and player.Character
+            and player.Character:FindFirstChild(AimbotParams.TargetPart)
+            and player.Character:FindFirstChild("Humanoid")
+            and player.Character.Humanoid.Health > 0 then
+            if not (AimbotParams.TeamCheck and player.Team == game.Players.LocalPlayer.Team) then
+                local screenPos, onScreen = game.Workspace.CurrentCamera:WorldToViewportPoint(player.Character[AimbotParams.TargetPart].Position)
+                if onScreen then
+                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                    if dist < closestDist then closestDist = dist; closestPlayer = player end
+                end
+            end
+        end
     end
+    return closestPlayer
+end
 
-    local f = Instance.new("Frame", _notifHolder)
-    f.Size = UDim2.new(0, 340, 0, 80)
-    f.Position = UDim2.new(1, 360, 1, -100)
-    f.BackgroundColor3 = Theme.BgCard; f.ZIndex = 500
-    corner(Theme.RadiusSm, f); stroke(gold and Theme.Premium or Theme.Accent, 1.5, f)
-    gradient(f, Theme.BgSecondary, Theme.BgCard, 90)
-
-    local accent = Instance.new("Frame", f)
-    accent.Size = UDim2.new(0, 5, 0.6, 0); accent.Position = UDim2.new(0, 10, 0.2, 0)
-    accent.BackgroundColor3 = gold and Theme.Premium or Theme.Accent
-    accent.BorderSizePixel = 0; accent.ZIndex = 501; corner(Theme.RadiusPill, accent)
-
-    local tl = Instance.new("TextLabel", f)
-    tl.Size = UDim2.new(1, -40, 0, 22); tl.Position = UDim2.new(0, 24, 0, 10)
-    tl.BackgroundTransparency = 1; tl.Text = title
-    tl.TextColor3 = gold and Theme.Premium or Theme.AccentBright
-    tl.Font = Enum.Font.GothamBlack; tl.TextSize = 14; tl.ZIndex = 501
-    tl.TextXAlignment = Enum.TextXAlignment.Left
-
-    local dl = Instance.new("TextLabel", f)
-    dl.Size = UDim2.new(1, -40, 0, 36); dl.Position = UDim2.new(0, 24, 0, 34)
-    dl.BackgroundTransparency = 1; dl.Text = text
-    dl.TextColor3 = Theme.TextSecondary; dl.Font = Enum.Font.Gotham
-    dl.TextSize = 12; dl.TextWrapped = true; dl.ZIndex = 501
-    dl.TextXAlignment = Enum.TextXAlignment.Left
-
-    local prog = Instance.new("Frame", f)
-    prog.Size = UDim2.new(1, -20, 0, 3); prog.Position = UDim2.new(0, 10, 1, -8)
-    prog.BackgroundColor3 = gold and Theme.Premium or Theme.Accent; prog.ZIndex = 501
-    corner(Theme.RadiusPill, prog)
-    tw(prog, {Size = UDim2.new(0, 0, 0, 3)}, dur, Enum.EasingStyle.Linear)
-
-    tw(f, {Position = UDim2.new(1, -360, 1, -100)}, 0.5, Enum.EasingStyle.Back)
-
-    task.delay(dur, function()
-    tw(f, {Position = UDim2.new(1, 380, 1, -100), BackgroundTransparency = 0.5}, 0.4)
-    task.wait(0.45); pcall(function() f:Destroy() end)
+game:GetService("RunService").RenderStepped:Connect(function()
+    if AimbotParams.ShowFOV then
+        FOVCircle.Position = game:GetService("UserInputService"):GetMouseLocation()
+        FOVCircle.Radius = AimbotParams.FOVRadius
+        FOVCircle.Visible = true
+    else
+        FOVCircle.Visible = false
+    end
+    if AimbotParams.Enabled and game:GetService("UserInputService"):IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        local target = getClosestPlayerToCursor()
+        if target and target.Character and target.Character:FindFirstChild(AimbotParams.TargetPart) then
+            local currentCam = game.Workspace.CurrentCamera
+            local targetCFrame = CFrame.new(currentCam.CFrame.Position, target.Character[AimbotParams.TargetPart].Position)
+            currentCam.CFrame = currentCam.CFrame:Lerp(targetCFrame, AimbotParams.Smoothness)
+        end
+    end
 end)
-end
 
-function SnowyLib:Notify(title, text, dur, gold)
-    task.spawn(_pushNotif, title, text, dur, gold)
-end
--- 对外暴露通知弹窗接口
+local aimbotBox = Tabs.Aimbot:AddLeftGroupbox("战斗设置")
+aimbotBox:AddToggle("Aimbot", {
+    Text = "启用自瞄（按住右键）",
+    Default = false,
+    Callback = function(state)
+        AimbotParams.Enabled = state
+    end,
+})
+aimbotBox:AddToggle("ShowFOV", {
+    Text = "显示自瞄范围圈",
+    Default = false,
+    Callback = function(state)
+        AimbotParams.ShowFOV = state
+    end,
+})
+aimbotBox:AddSlider("FOVSize", {
+    Text = "自瞄范围大小",
+    Default = 80,
+    Min = 20,
+    Max = 300,
+    Rounding = 1,
+    Compact = false,
+    Callback = function(value)
+        AimbotParams.FOVRadius = value
+    end,
+})
+aimbotBox:AddSlider("Smoothness", {
+    Text = "自瞄平滑度（100=瞬移）",
+    Default = 50,
+    Min = 1,
+    Max = 100,
+    Rounding = 1,
+    Compact = false,
+    Callback = function(value)
+        AimbotParams.Smoothness = value / 100
+    end,
+})
+aimbotBox:AddToggle("TeamCheck", {
+    Text = "队友检测（忽略队友）",
+    Default = true,
+    Callback = function(state)
+        AimbotParams.TeamCheck = state
+    end,
+})
 
-local _lastPremNag      = 0
-local _activePremModal  = nil
-local PREM_SITE         = "getsnowy.xyz/pricing"
--- 高级会员购买页面短链接
-local PREM_SITE_URL     = "https://getsnowy.xyz/pricing"
--- 高级会员完整网址
+-- ---------- 设置 ----------
+local uiBox = Tabs.Settings:AddLeftGroupbox("界面")
+uiBox:AddButton({
+    Text = "测试通知",
+    Func = function()
+        notify("测试", "通知系统正常！", 4)
+    end,
+})
 
-local function _nagPremium(featureName)
--- 高级功能弹窗，提示需要会员
-    local now = tick()
-    if now - _lastPremNag < 1.2 then return end
-    _lastPremNag = now
-    if _activePremModal then pcall(function() _activePremModal:Destroy() end); _activePremModal = nil end
-
-    local ok, err = pcall(function()
-    local label = featureName and tostring(featureName) or "That feature"
-
-    local scr = Instance.new("ScreenGui")
-    scr.Name               = "SnowyPremiumModal"
-    scr.ZIndexBehavior     = Enum.ZIndexBehavior.Sibling
-    scr.IgnoreGuiInset     = true
-    scr.ResetOnSpawn       = false
-    scr.DisplayOrder       = 2147483647
-    local _parented = false
-    if not RunService:IsStudio() then
-        if syn and syn.protect_gui then pcall(function() syn.protect_gui(scr); scr.Parent = CoreGui; _parented = true end) end
-        if not _parented and gethui then pcall(function() scr.Parent = gethui(); _parented = true end) end
-        if not _parented and get_hidden_gui then pcall(function() scr.Parent = get_hidden_gui(); _parented = true end) end
+local uiTransparency = 0
+local function findHubGui()
+    local function scan(container)
+        for _, obj in ipairs(container:GetChildren()) do
+            if obj:IsA("ScreenGui") then
+                local hit = false
+                if tostring(obj.Name):lower():find("obsidian") then hit = true end
+                if not hit then
+                    for _, desc in ipairs(obj:GetDescendants()) do
+                        if desc:IsA("TextLabel") and tostring(desc.Text):find("红星") then hit = true break end
+                    end
+                end
+                if hit then return obj end
+            end
+        end
     end
-    if not _parented then
+    local g = scan(game:GetService("CoreGui"))
+    if g then return g end
+    return scan(game.Players.LocalPlayer:FindFirstChild("PlayerGui"))
+end
+
+uiBox:AddSlider("UIOpacity", {
+    Text = "界面透明度",
+    Default = 0,
+    Min = 0,
+    Max = 8,
+    Rounding = 1,
+    Compact = false,
+    Callback = function(v)
+        uiTransparency = v / 10
         pcall(function()
-        scr.Parent = (RunService:IsStudio() and LocalPlayer.PlayerGui) or CoreGui
-    end)
-end
-_activePremModal       = scr
+            local gui = findHubGui()
+            if not gui then return end
+            for _, desc in ipairs(gui:GetDescendants()) do
+                if desc:IsA("Frame") or desc:IsA("ImageLabel") then
+                    desc.BackgroundTransparency = math.clamp(uiTransparency, 0, 1)
+                elseif desc:IsA("TextLabel") then
+                    desc.TextTransparency = math.clamp(uiTransparency, 0, 1)
+                end
+            end
+        end)
+    end,
+})
 
-local back = Instance.new("TextButton", scr)
-back.Name                   = "Backdrop"
-back.Size                   = UDim2.fromScale(1, 1)
-back.BackgroundColor3       = Color3.new(0, 0, 0)
-back.BackgroundTransparency = 1
-back.BorderSizePixel        = 0
-back.AutoButtonColor        = false
-back.Text                   = ""
-back.ZIndex                 = 9000
-tw(back, { BackgroundTransparency = 0.45 }, 0.2)
--- 黑色半透明遮罩
+local infoBox = Tabs.Settings:AddLeftGroupbox("信息")
+infoBox:AddLabel("右键按住 = 自瞄")
+infoBox:AddLabel("拖动标题栏可移动窗口")
+infoBox:AddLabel("discord.gg/getsnowy")
+infoBox:AddButton({
+    Text = "复制 Discord 链接",
+    Func = function()
+        pcall(function() setclipboard("https://discord.gg/getsnowy") end)
+        notify("已复制", "Discord 链接已复制。")
+    end,
+})
+infoBox:AddButton({
+    Text = "重载菜单",
+    Func = function()
+        pcall(function()
+            if Window and Window.Destroy then Window:Destroy() end
+        end)
+        pcall(function()
+            local gui = findHubGui()
+            if gui then gui:Destroy() end
+        end)
+        task.wait(0.1)
+        notify("重载", "菜单已关闭，请重新运行脚本。")
+    end,
+})
+infoBox:AddLabel("雪花中心 v6.0 | Obsidian UI 汉化版")
+infoBox:AddLabel("已支持 50+ 款游戏检测")
 
-local card = Instance.new("Frame", scr)
-card.Name                   = "Card"
-card.AnchorPoint            = Vector2.new(0.5, 0.5)
-card.Position               = UDim2.fromScale(0.5, 0.5)
-card.Size                   = UDim2.fromOffset(0, 0)
-card.BackgroundColor3       = Theme.BgCard
-card.BorderSizePixel        = 0
-card.ZIndex                 = 9010
-card.ClipsDescendants       = true
-corner(18, card)
-stroke(Theme.Premium, 2, card)
-gradient(card, Theme.BgSecondary, Theme.BgCard, 125)
-shadow(card)
--- 弹窗卡片主体
-
-local bar = Instance.new("Frame", card)
-bar.Size                  = UDim2.new(1, 0, 0, 4)
-bar.BackgroundColor3      = Theme.Premium
-bar.BorderSizePixel       = 0
-bar.ZIndex                = 9011
-gradient(bar, Theme.PremiumDark, Theme.Premium, 0)
--- 卡片顶部金色条
-
-local lockContainer = Instance.new("Frame", card)
-lockContainer.Name                 = "LockContainer"
-lockContainer.Size                 = UDim2.new(0, 68, 0, 68)
-lockContainer.Position             = UDim2.new(0.5, -34, 0, 28)
-lockContainer.BackgroundColor3     = Theme.PremiumDim
-lockContainer.BorderSizePixel      = 0
-lockContainer.ZIndex               = 9012
-corner(999, lockContainer)
-stroke(Theme.Premium, 2, lockContainer)
--- 锁图标外圆
-
-local shackle = Instance.new("Frame", lockContainer)
-shackle.Name                 = "Shackle"
-shackle.Size                 = UDim2.new(0, 26, 0, 26)
-shackle.Position             = UDim2.new(0.5, -13, 0.5, -23)
-shackle.BackgroundTransparency = 1
-shackle.ZIndex               = 9013
-local shackleCorner = Instance.new("UICorner", shackle)
-shackleCorner.CornerRadius   = UDim.new(0.5, 0)
-local shackleStroke = Instance.new("UIStroke", shackle)
-shackleStroke.Color          = Theme.Premium
-shackleStroke.Thickness      = 3
-shackleStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
--- 锁的圆环
-
-local lockBody = Instance.new("Frame", lockContainer)
-lockBody.Name                 = "Body"
-lockBody.Size                 = UDim2.new(0, 34, 0, 26)
-lockBody.Position             = UDim2.new(0.5, -17, 0.5, -7)
-lockBody.BackgroundColor3     = Theme.Premium
-lockBody.BorderSizePixel      = 0
-lockBody.ZIndex               = 9014
-local bodyCorner = Instance.new("UICorner", lockBody)
-bodyCorner.CornerRadius   = UDim.new(0, 4)
--- 锁的下半部分
-
-local keyholeCircle = Instance.new("Frame", lockBody)
-keyholeCircle.Name                 = "KeyholeCircle"
-keyholeCircle.Size                 = UDim2.new(0, 6, 0, 6)
-keyholeCircle.Position             = UDim2.new(0.5, -3, 0.3, 0)
-keyholeCircle.BackgroundColor3     = Theme.BgCard
+::done::
